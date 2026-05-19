@@ -44,6 +44,9 @@ import tachiyomi.domain.history.anime.model.AnimeHistoryWithRelations
 import tachiyomi.domain.items.episode.model.Episode
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.source.anime.service.AnimeSourceManager
+import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
+import eu.kanade.tachiyomi.source.NsfwSourceFilter
+import kotlinx.coroutines.flow.combine
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -60,6 +63,7 @@ class AnimeHistoryScreenModel(
     private val updateAnime: UpdateAnime = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     private val sourceManager: AnimeSourceManager = Injekt.get(),
+    private val animeExtensionManager: AnimeExtensionManager = Injekt.get(),
 ) : StateScreenModel<AnimeHistoryScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
@@ -71,7 +75,19 @@ class AnimeHistoryScreenModel(
     init {
         screenModelScope.launch {
             _query.collectLatest { query ->
-                getHistory.subscribe(query ?: "")
+                combine(
+                    getHistory.subscribe(query ?: ""),
+                    libraryPreferences.hideNsfwInHistory().changes(),
+                ) { historyList, hideNsfw ->
+                    if (hideNsfw) {
+                        // Filter is purely in-memory — the database is never modified.
+                        // Watch history and episode seen-state are always preserved.
+                        val nsfwSourceIds = NsfwSourceFilter.getAllNsfwAnimeSourceIds(animeExtensionManager)
+                        historyList.filter { it.coverData.sourceId !in nsfwSourceIds }
+                    } else {
+                        historyList
+                    }
+                }
                     .distinctUntilChanged()
                     .catch { error ->
                         logcat(LogPriority.ERROR, error)
