@@ -44,6 +44,9 @@ import tachiyomi.domain.history.manga.model.MangaHistoryWithRelations
 import tachiyomi.domain.items.chapter.model.Chapter
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.source.manga.service.MangaSourceManager
+import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
+import eu.kanade.tachiyomi.source.NsfwSourceFilter
+import kotlinx.coroutines.flow.combine
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -60,6 +63,7 @@ class MangaHistoryScreenModel(
     private val updateManga: UpdateManga = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     private val sourceManager: MangaSourceManager = Injekt.get(),
+    private val mangaExtensionManager: MangaExtensionManager = Injekt.get(),
 ) : StateScreenModel<MangaHistoryScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
@@ -71,7 +75,19 @@ class MangaHistoryScreenModel(
     init {
         screenModelScope.launch {
             _query.collectLatest { query ->
-                getHistory.subscribe(query ?: "")
+                combine(
+                    getHistory.subscribe(query ?: ""),
+                    libraryPreferences.hideNsfwInHistory().changes(),
+                ) { historyList, hideNsfw ->
+                    if (hideNsfw) {
+                        // Filter is purely in-memory — the database is never modified.
+                        // Reading progress and chapter read-state are always preserved.
+                        val nsfwSourceIds = NsfwSourceFilter.getAllNsfwMangaSourceIds(mangaExtensionManager)
+                        historyList.filter { it.coverData.sourceId !in nsfwSourceIds }
+                    } else {
+                        historyList
+                    }
+                }
                     .distinctUntilChanged()
                     .catch { error ->
                         logcat(LogPriority.ERROR, error)
