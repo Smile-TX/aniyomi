@@ -61,6 +61,16 @@ class LibraryPreferences(
     fun showContinueViewingButton() =
         preferenceStore.getBoolean("display_continue_reading_button", false)
 
+    // History
+
+    /**
+     * When enabled, entries from NSFW/18+ sources are hidden from the History tab.
+     * Reading progress is still recorded normally in the database — this only affects
+     * what is displayed. Does not interact with or modify incognito mode behaviour.
+     */
+    fun hideNsfwInHistory() = preferenceStore.getBoolean("pref_hide_nsfw_in_history", false)
+
+
     // Common Category
 
     fun categoryTabs() = preferenceStore.getBoolean("display_category_tabs", true)
