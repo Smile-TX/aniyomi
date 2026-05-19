@@ -18,6 +18,7 @@ import kotlinx.collections.immutable.persistentListOf
 import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepoCount
 import mihon.domain.extensionrepo.manga.interactor.GetMangaExtensionRepoCount
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -37,6 +38,7 @@ object SettingsBrowseScreen : SearchableSettings {
         val navigator = LocalNavigator.currentOrThrow
 
         val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
         val getMangaExtensionRepoCount = remember { Injekt.get<GetMangaExtensionRepoCount>() }
         val getAnimeExtensionRepoCount = remember { Injekt.get<GetAnimeExtensionRepoCount>() }
 
@@ -91,6 +93,11 @@ object SettingsBrowseScreen : SearchableSettings {
                                 title = context.stringResource(MR.strings.pref_category_nsfw_content),
                             )
                         },
+                    ),
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = libraryPreferences.hideNsfwInHistory(),
+                        title = stringResource(MR.strings.pref_hide_nsfw_in_history),
+                        subtitle = stringResource(MR.strings.pref_hide_nsfw_in_history_summary),
                     ),
                     Preference.PreferenceItem.InfoPreference(
                         stringResource(MR.strings.parental_controls_info),
