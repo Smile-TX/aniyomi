@@ -1,0 +1,37 @@
+name: Build Debug APK
+
+# Bisa dipicu manual dari tab Actions di GitHub
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        # Pakai assembleDebug — tidak perlu signing key
+        # Skip spotlessCheck karena kita modifikasi code sendiri
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aniyomi-debug-apk
+          # Debug build menghasilkan satu APK universal
+          path: app/build/outputs/apk/debug/app-debug.apk
+          # Simpan 7 hari, cukup untuk download
+          retention-days: 7
